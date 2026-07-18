@@ -2,7 +2,7 @@
 
 Cyberpunk-anime themed portfolio. Static SPA build ships to GitHub Pages.
 
-## Dev (Lovable preview)
+## Dev (Lovable preview) 
 
 Runs via TanStack Start:
 
