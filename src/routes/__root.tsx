@@ -1,16 +1,14 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
   Link,
-  createRootRouteWithContext,
+  createRootRoute,
   useRouter,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
 
 function NotFoundComponent() {
   return (
@@ -37,9 +35,6 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
-  useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -72,20 +67,20 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
-export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+export const Route = createRootRoute({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Jabirhusain KP — Data × AI Engineer" },
+      { title: "Jabirhusain KP - Data × AI Engineer" },
       {
         name: "description",
         content:
-          "Portfolio of Jabirhusain KP — Data & AI Engineer at IBM (Heineken). Databricks lakehouse, FinOps, LangGraph multi-agent systems.",
+          "Portfolio of Jabirhusain KP, Data & AI Engineer at IBM (Heineken). Databricks lakehouse, FinOps, LangGraph multi-agent systems.",
       },
       { name: "author", content: "Jabirhusain KP" },
       { name: "theme-color", content: "#05070d" },
-      { property: "og:title", content: "Jabirhusain KP — Data × AI Engineer" },
+      { property: "og:title", content: "Jabirhusain KP - Data × AI Engineer" },
       {
         property: "og:description",
         content:
@@ -130,12 +125,10 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 function RootComponent() {
-  const { queryClient } = Route.useRouteContext();
-
   return (
-    <QueryClientProvider client={queryClient}>
+    <>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
-    </QueryClientProvider>
+    </>
   );
 }

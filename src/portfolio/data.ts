@@ -21,7 +21,7 @@ export const profile = {
     { k: "80%", v: "monitoring ↓" },
   ],
   about: [
-    "Data & AI Engineer on IBM's Heineken engagement — building the DataOps observability standard, driving FinOps re-architecture across a ~6 PB lakehouse, and shipping org-wide GenAI tooling.",
+    "Data & AI Engineer on IBM's Heineken engagement: building the DataOps observability standard, driving FinOps re-architecture across a ~6 PB lakehouse, and shipping org-wide GenAI tooling.",
     "Diagnose platform overheads, quantify their business cost, engineer automated root-cause solutions. Repeat until it becomes the standard.",
   ],
   roles: [
@@ -74,16 +74,16 @@ export const profile = {
       body: "Azure Logic Apps error classifier separates transient cloud drops from fatal bugs. 30-min back-off self-heal for the transient class; instant escalation for logic errors. Killed a whole category of alert fatigue.",
     },
     {
-      metric: "50–60h",
+      metric: "50-60h",
       unit: "/month recaptured",
       title: "Scaled Enterprise AI Assistants (ICA)",
-      body: "Independently proposed & shipped three domain-specialized AI assistants — Databricks Transform Expert, User Story Generator, RAG Ops Helper — scoped context + dedicated tools. Adopted org-wide by the IBM Data Service Line.",
+      body: "Independently proposed & shipped three domain-specialized AI assistants (Databricks Transform Expert, User Story Generator, RAG Ops Helper) with scoped context + dedicated tools. Adopted org-wide by the IBM Data Service Line.",
     },
     {
       metric: "70%",
       unit: "compute avoided",
       title: "Multi-Billion Record Recovery",
-      body: "200M–2B row core tables corrupted. Delta time-travel + key-join isolation + targeted replay. Skipped the full-history refresh, preserved SLAs, saved 30% engineering effort.",
+      body: "200M-2B row core tables corrupted. Delta time-travel + key-join isolation + targeted replay. Skipped the full-history refresh, preserved SLAs, saved 30% engineering effort.",
     },
     {
       metric: "~91%",
@@ -99,13 +99,13 @@ export const profile = {
       href: "https://github.com/jbrhsn/aria_multi_agent_bot",
       body: "LangGraph + Python. 5 autonomous agents (Goal · Learning · Research · Health · Finance) behind one Discord bot. YAML-declared ReActAgent engine, auto-generated typed CRUD from CREATE TABLE, Decide→Plan→Execute↔Tools→Evaluate→Final graph with autonomous self-evaluation, per-user SQLite + sqlite-vec isolation.",
       chips: ["LangGraph", "Python", "SQLite", "sqlite-vec", "Docker", "OpenRouter"],
-      note: "Single-operator system — production-grade engineering, not production traffic.",
+      note: "Single-operator system: production-grade engineering, not production traffic.",
     },
     {
       name: "RESUME_WRITER",
       subtitle: "Agentic CV Expert",
       href: "https://github.com/jbrhsn/resume_writer",
-      body: "14-node LangGraph orchestrator simulating a hiring committee — CEO, Senior HM, Recruiter, ATS — with a plan-conflict mediator and a self-correction loop bounded by score gates and MAX_EDITING_CYCLES. Per-task model routing, 7 Pydantic schemas, tectonic PDF export, FastAPI + SSE web UI.",
+      body: "14-node LangGraph orchestrator simulating a hiring committee (CEO, Senior HM, Recruiter, ATS) with a plan-conflict mediator and a self-correction loop bounded by score gates and MAX_EDITING_CYCLES. Per-task model routing, 7 Pydantic schemas, tectonic PDF export, FastAPI + SSE web UI.",
       chips: ["LangGraph", "Pydantic", "FastAPI", "SSE", "tectonic", "OpenRouter"],
       note: "Single-operator personal project.",
     },

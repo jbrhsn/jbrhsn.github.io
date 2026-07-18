@@ -1,8 +1,8 @@
-# Jabirhusain KP — Portfolio
+# Jabirhusain KP - Portfolio
 
 Cyberpunk-anime themed portfolio. Static SPA build ships to GitHub Pages.
 
-## Dev (Lovable preview) 
+## Dev
 
 Runs via TanStack Start:
 
@@ -14,7 +14,7 @@ Route: `src/routes/index.tsx` renders `<Portfolio />` from `src/portfolio/`.
 
 ## Static build for GitHub Pages
 
-A separate Vite config (`vite.static.config.ts`) builds a plain React SPA into `dist-static/` using the same portfolio components — no TanStack Start server needed.
+A separate Vite config (`vite.static.config.ts`) builds a plain React SPA into `dist-static/` using the same portfolio components; no TanStack Start server needed.
 
 ```
 bunx vite build --config vite.static.config.ts
@@ -34,4 +34,4 @@ Site will be live at `https://<user>.github.io/<repo>/`.
 
 ## Content
 
-All copy lives in `src/portfolio/data.ts` — edit there to update the site.
+All copy lives in `src/portfolio/data.ts`; edit there to update the site.

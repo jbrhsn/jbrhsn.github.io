@@ -75,6 +75,11 @@
     color: var(--color-ink);
     font-family: var(--font-body);
   }
+  html {
+    scroll-behavior: smooth;
+    /* Offset anchor jumps so section headings clear the sticky nav. */
+    scroll-padding-top: 5rem;
+  }
   body {
     background-image:
       radial-gradient(1200px 600px at 80% -10%, rgba(255, 45, 146, 0.12), transparent 60%),
@@ -284,6 +289,9 @@
 .animate-pulse-neon { animation: pulse-neon 2.8s ease-in-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
   .glitch::before,
   .glitch::after,
   .animate-flicker,

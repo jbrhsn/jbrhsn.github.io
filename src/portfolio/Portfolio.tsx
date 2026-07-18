@@ -20,7 +20,10 @@ const SectionHeader = ({
 }) => (
   <header className="mb-10 flex flex-col gap-2">
     <div className="flex items-center gap-3 font-mono text-xs uppercase tracking-[0.3em] text-[color:var(--color-ink-dim)]">
-      <span className="neon-magenta">§ {index}</span>
+      <span className="neon-magenta">
+        <span aria-hidden>§ </span>
+        {index}
+      </span>
       <span className="h-px flex-1 bg-gradient-to-r from-[color:var(--color-line-strong)] to-transparent" />
       <span>{eyebrow}</span>
     </div>
@@ -63,11 +66,11 @@ const Nav = () => (
 
 const Hero = () => (
   <section id="top" className="relative overflow-hidden scanlines">
-    <div aria-hidden className="absolute inset-0 grid-bg opacity-70" />
+    <div aria-hidden className="pointer-events-none absolute inset-0 grid-bg opacity-70" />
     <div aria-hidden className="pointer-events-none absolute -top-32 right-[-10%] h-[520px] w-[520px] rounded-full bg-[color:var(--color-neon)]/15 blur-3xl" />
     <div aria-hidden className="pointer-events-none absolute bottom-[-20%] left-[-10%] h-[520px] w-[520px] rounded-full bg-[color:var(--color-cyan)]/15 blur-3xl" />
 
-    <div className="mx-auto max-w-6xl px-4 pt-16 pb-24 md:px-8 md:pt-24 md:pb-32">
+    <div className="relative mx-auto max-w-6xl px-4 pt-16 pb-24 md:px-8 md:pt-24 md:pb-32">
       <div className="mb-6 flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.35em] text-[color:var(--color-ink-dim)]">
         <span className="inline-block h-2 w-2 rounded-full bg-[color:var(--color-phos)] animate-pulse-neon" />
         SYSTEM ONLINE · {profile.location.toUpperCase()}
@@ -93,10 +96,10 @@ const Hero = () => (
 
       <div className="mt-10 flex flex-wrap gap-3">
         <a href="#projects" className="btn-neon">
-          ▸ VIEW OPERATIONS
+          <span aria-hidden>▸</span> VIEW OPERATIONS
         </a>
         <a href="#contact" className="btn-ghost">
-          ◇ OPEN CHANNEL
+          <span aria-hidden>◇</span> OPEN CHANNEL
         </a>
       </div>
 
@@ -150,7 +153,7 @@ const About = () => (
         <div className="flex flex-wrap gap-2 pt-2">
           {profile.roles.map((r) => (
             <span key={r} className="chip">
-              ◇ {r}
+              <span aria-hidden>◇</span> {r}
             </span>
           ))}
         </div>
@@ -170,7 +173,7 @@ const About = () => (
           </div>
           <div className="flex justify-between gap-4 border-b border-[color:var(--color-line)] pb-2">
             <dt className="text-[color:var(--color-ink-dim)]">STATUS</dt>
-            <dd className="neon-phos">OPEN · REMOTE / HYBRID</dd>
+            <dd className="neon-phos">OPEN TO CONVERSATIONS</dd>
           </div>
           <div className="flex justify-between gap-4 border-b border-[color:var(--color-line)] pb-2">
             <dt className="text-[color:var(--color-ink-dim)]">CLIENT</dt>
@@ -267,7 +270,7 @@ const Projects = () => (
                 {p.name}
               </h3>
               <span className="font-mono text-xs text-[color:var(--color-cyan)]">
-                GITHUB ↗
+                GITHUB <span aria-hidden>↗</span>
               </span>
             </div>
             <div className="mt-1 font-head text-sm uppercase tracking-[0.2em] text-[color:var(--color-ink-dim)]">
@@ -309,7 +312,7 @@ const Skills = () => (
           <ul className="space-y-1.5">
             {s.items.map((it) => (
               <li key={it} className="flex gap-2">
-                <span className="text-[color:var(--color-phos)]">▸</span>
+                <span aria-hidden className="text-[color:var(--color-phos)]">▸</span>
                 <span className="text-[color:var(--color-ink)]/90">{it}</span>
               </li>
             ))}
@@ -349,9 +352,22 @@ const Skills = () => (
 const Contact = () => (
   <section id="contact" className="mx-auto max-w-6xl px-4 py-20 md:px-8 md:py-28">
     <SectionHeader index="06" eyebrow="OPEN CHANNEL" title="CONTACT" />
+    <p className="mb-6 max-w-2xl text-sm md:text-base text-[color:var(--color-ink)]/80">
+      Not actively job-hunting, but if you have an interesting opportunity or a hard
+      problem worth solving, my DMs are open. Reach out on{" "}
+      <a
+        href={profile.links.linkedin}
+        target="_blank"
+        rel="noreferrer"
+        className="underline decoration-[color:var(--color-neon)] decoration-1 underline-offset-4 hover:neon-magenta"
+      >
+        LinkedIn
+      </a>{" "}
+      and let&apos;s talk.
+    </p>
     <div className="hud-panel hud-corners scanlines p-6 md:p-10 font-mono text-sm md:text-base">
       <div className="mb-4 flex items-center gap-2 text-[color:var(--color-ink-dim)]">
-        <span className="neon-phos">●</span>
+        <span aria-hidden className="neon-phos">●</span>
         <span>jkp@nightcity ~ % ./contact.sh</span>
       </div>
       <ul className="space-y-3">
@@ -364,7 +380,7 @@ const Contact = () => (
         ].map(([label, value, href]) => (
           <li key={label} className="flex flex-wrap items-baseline gap-3">
             <span className="w-20 text-[color:var(--color-ink-dim)]">{label}</span>
-            <span className="neon-cyan">▸</span>
+            <span aria-hidden className="neon-cyan">▸</span>
             <a
               href={href}
               target={href!.startsWith("http") ? "_blank" : undefined}
@@ -378,10 +394,10 @@ const Contact = () => (
       </ul>
       <div className="mt-6 flex flex-wrap gap-3">
         <a href={`mailto:${profile.email}`} className="btn-neon">
-          ▸ SEND TRANSMISSION
+          <span aria-hidden>▸</span> SEND TRANSMISSION
         </a>
         <a href={profile.links.github} target="_blank" rel="noreferrer" className="btn-ghost">
-          ◇ GITHUB.ARCHIVE
+          <span aria-hidden>◇</span> GITHUB.ARCHIVE
         </a>
       </div>
     </div>
