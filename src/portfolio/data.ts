@@ -2,8 +2,7 @@ export const profile = {
   name: "JABIRHUSAIN.KP",
   title: "DATA × AI ENGINEER",
   affiliation: "IBM ▸ HEINEKEN",
-  tagline:
-    "Engineering at the convergence of enterprise lakehouses and autonomous multi-agent AI.",
+  tagline: "Engineering at the convergence of enterprise lakehouses and autonomous multi-agent AI.",
   location: "Bengaluru, IN",
   email: "jbrhsn.kp@gmail.com",
   phone: "+91-8129556611",

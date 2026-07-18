@@ -1,4 +1,133 @@
+import { useEffect, useRef, useState } from "react";
 import { profile } from "./data";
+
+const SECTIONS = ["about", "timeline", "impact", "projects", "skills", "contact"];
+
+const prefersReducedMotion = () =>
+  typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+/** Reveal an element (fade/slide-up) once it scrolls into view. */
+function useReveal<T extends HTMLElement>() {
+  const ref = useRef<T>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (prefersReducedMotion() || typeof IntersectionObserver === "undefined") {
+      el.classList.add("is-visible");
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+            io.unobserve(entry.target);
+          }
+        }
+      },
+      { threshold: 0.15, rootMargin: "0px 0px -10% 0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return ref;
+}
+
+/** Track which section is currently in view for nav highlighting. */
+function useActiveSection() {
+  const [active, setActive] = useState<string>("");
+  useEffect(() => {
+    if (typeof IntersectionObserver === "undefined") return;
+    const els = SECTIONS.map((id) => document.getElementById(id)).filter(
+      (el): el is HTMLElement => el !== null,
+    );
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) setActive(entry.target.id);
+        }
+      },
+      { rootMargin: "-45% 0px -50% 0px", threshold: 0 },
+    );
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, []);
+  return active;
+}
+
+/** Scroll depth (0..1) for the progress bar. */
+function useScrollProgress() {
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    const onScroll = () => {
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      setProgress(scrollable > 0 ? window.scrollY / scrollable : 0);
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, []);
+  return progress;
+}
+
+/** Count a numeric value up from 0 once the element enters view. */
+function useCountUp(target: number, duration = 1400) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [value, setValue] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (prefersReducedMotion() || typeof IntersectionObserver === "undefined" || target === 0) {
+      setValue(target);
+      return;
+    }
+    let raf = 0;
+    let start = 0;
+    const step = (ts: number) => {
+      if (!start) start = ts;
+      const t = Math.min((ts - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setValue(target * eased);
+      if (t < 1) raf = requestAnimationFrame(step);
+    };
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          raf = requestAnimationFrame(step);
+          io.disconnect();
+        }
+      },
+      { threshold: 0.5 },
+    );
+    io.observe(el);
+    return () => {
+      io.disconnect();
+      cancelAnimationFrame(raf);
+    };
+  }, [target, duration]);
+  return { ref, value };
+}
+
+/** Split a stat like "€1K+/mo" into leading text, a number, and trailing text. */
+function AnimatedStat({ text }: { text: string }) {
+  const match = text.match(/^(\D*)([\d.]+)(.*)$/);
+  const num = match ? match[2] : "0";
+  const decimals = num.includes(".") ? num.split(".")[1].length : 0;
+  const { ref, value } = useCountUp(parseFloat(num));
+  if (!match) return <>{text}</>;
+  const [, prefix, , suffix] = match;
+  return (
+    <span ref={ref}>
+      {prefix}
+      {value.toFixed(decimals)}
+      {suffix}
+    </span>
+  );
+}
 
 const Katakana = ({ text, className = "" }: { text: string; className?: string }) => (
   <span
@@ -33,7 +162,7 @@ const SectionHeader = ({
   </header>
 );
 
-const Nav = () => (
+const Nav = ({ active, progress }: { active: string; progress: number }) => (
   <nav className="sticky top-0 z-40 border-b border-[color:var(--color-line)] bg-[color:var(--color-bg)]/70 backdrop-blur">
     <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:px-8">
       <a href="#top" className="font-display text-sm tracking-[0.25em] neon-cyan">
@@ -51,7 +180,10 @@ const Nav = () => (
           <a
             key={id}
             href={`#${id}`}
-            className="transition-colors hover:text-[color:var(--color-cyan)]"
+            className={`nav-link transition-colors hover:text-[color:var(--color-cyan)] ${
+              active === id ? "is-active" : ""
+            }`}
+            aria-current={active === id ? "true" : undefined}
           >
             {label}
           </a>
@@ -61,14 +193,25 @@ const Nav = () => (
         <span aria-hidden>▸</span> HAIL
       </a>
     </div>
+    <div
+      aria-hidden
+      className="scroll-progress h-0.5 w-full"
+      style={{ ["--scroll" as string]: progress }}
+    />
   </nav>
 );
 
 const Hero = () => (
   <section id="top" className="relative overflow-hidden scanlines">
     <div aria-hidden className="pointer-events-none absolute inset-0 grid-bg opacity-70" />
-    <div aria-hidden className="pointer-events-none absolute -top-32 right-[-10%] h-[520px] w-[520px] rounded-full bg-[color:var(--color-neon)]/15 blur-3xl" />
-    <div aria-hidden className="pointer-events-none absolute bottom-[-20%] left-[-10%] h-[520px] w-[520px] rounded-full bg-[color:var(--color-cyan)]/15 blur-3xl" />
+    <div
+      aria-hidden
+      className="pointer-events-none absolute -top-32 right-[-10%] h-[520px] w-[520px] rounded-full bg-[color:var(--color-neon)]/15 blur-3xl"
+    />
+    <div
+      aria-hidden
+      className="pointer-events-none absolute bottom-[-20%] left-[-10%] h-[520px] w-[520px] rounded-full bg-[color:var(--color-cyan)]/15 blur-3xl"
+    />
 
     <div className="relative mx-auto max-w-6xl px-4 pt-16 pb-24 md:px-8 md:pt-24 md:pb-32">
       <div className="mb-6 flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.35em] text-[color:var(--color-ink-dim)]">
@@ -106,7 +249,9 @@ const Hero = () => (
       <div className="mt-14 grid grid-cols-2 gap-3 md:grid-cols-4">
         {profile.stats.map((s) => (
           <div key={s.k} className="hud-panel hud-corners px-4 py-4">
-            <div className="font-display text-2xl md:text-3xl neon-cyan">{s.k}</div>
+            <div className="font-display text-2xl md:text-3xl neon-cyan">
+              <AnimatedStat text={s.k} />
+            </div>
             <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.2em] text-[color:var(--color-ink-dim)]">
               {s.v}
             </div>
@@ -142,267 +287,300 @@ const Hero = () => (
   </section>
 );
 
-const About = () => (
-  <section id="about" className="mx-auto max-w-6xl px-4 py-20 md:px-8 md:py-28">
-    <SectionHeader index="01" eyebrow="OPERATOR PROFILE" title="ABOUT" />
-    <div className="grid gap-8 md:grid-cols-[1fr_260px]">
-      <div className="space-y-5 text-base md:text-lg text-[color:var(--color-ink)]/85 leading-relaxed">
-        {profile.about.map((p, i) => (
-          <p key={i}>{p}</p>
+const About = () => {
+  const ref = useReveal<HTMLElement>();
+  return (
+    <section ref={ref} id="about" className="reveal mx-auto max-w-6xl px-4 py-20 md:px-8 md:py-28">
+      <SectionHeader index="01" eyebrow="OPERATOR PROFILE" title="ABOUT" />
+      <div className="grid gap-8 md:grid-cols-[1fr_260px]">
+        <div className="space-y-5 text-base md:text-lg text-[color:var(--color-ink)]/85 leading-relaxed">
+          {profile.about.map((p, i) => (
+            <p key={i}>{p}</p>
+          ))}
+          <div className="flex flex-wrap gap-2 pt-2">
+            {profile.roles.map((r) => (
+              <span key={r} className="chip">
+                <span aria-hidden>◇</span> {r}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <aside className="hud-panel hud-corners relative flex flex-col justify-between p-5">
+          <div
+            aria-hidden
+            className="font-display text-[6rem] leading-none neon-magenta opacity-90"
+          >
+            {profile.kanji}
+          </div>
+          <dl className="mt-6 space-y-3 font-mono text-xs">
+            <div className="flex justify-between gap-4 border-b border-[color:var(--color-line)] pb-2">
+              <dt className="text-[color:var(--color-ink-dim)]">LOC</dt>
+              <dd className="text-[color:var(--color-cyan)]">{profile.location}</dd>
+            </div>
+            <div className="flex justify-between gap-4 border-b border-[color:var(--color-line)] pb-2">
+              <dt className="text-[color:var(--color-ink-dim)]">STATUS</dt>
+              <dd className="neon-phos">OPEN TO CONVERSATIONS</dd>
+            </div>
+            <div className="flex justify-between gap-4 border-b border-[color:var(--color-line)] pb-2">
+              <dt className="text-[color:var(--color-ink-dim)]">CLIENT</dt>
+              <dd>HEINEKEN · ~6 PB</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-[color:var(--color-ink-dim)]">EXP</dt>
+              <dd>4+ YRS</dd>
+            </div>
+          </dl>
+        </aside>
+      </div>
+    </section>
+  );
+};
+
+const Timeline = () => {
+  const ref = useReveal<HTMLElement>();
+  return (
+    <section
+      ref={ref}
+      id="timeline"
+      className="reveal mx-auto max-w-6xl px-4 py-20 md:px-8 md:py-28"
+    >
+      <SectionHeader index="02" eyebrow="MISSION LOG" title="TIMELINE" />
+      <ol className="relative space-y-8 pl-8 md:pl-12 before:absolute before:left-2 md:before:left-3 before:top-2 before:bottom-2 before:w-px before:bg-gradient-to-b before:from-[color:var(--color-cyan)] before:via-[color:var(--color-neon)] before:to-transparent">
+        {profile.timeline.map((t, i) => (
+          <li key={i} className="relative">
+            <span
+              aria-hidden
+              className="absolute -left-6 md:-left-9 top-1 h-4 w-4 rotate-45 border border-[color:var(--color-cyan)] bg-[color:var(--color-bg)] animate-pulse-neon"
+            />
+            <div className="hud-panel hud-corners p-5">
+              <div className="flex flex-wrap items-baseline gap-3 font-mono text-[11px] uppercase tracking-[0.25em]">
+                <span className="neon-magenta">{t.date}</span>
+                <span className="text-[color:var(--color-ink-dim)]">
+                  ENTRY_{String(i + 1).padStart(2, "0")}
+                </span>
+              </div>
+              <h3 className="mt-2 font-head text-xl md:text-2xl uppercase text-[color:var(--color-ink)]">
+                {t.title}
+              </h3>
+              <p className="mt-2 text-sm md:text-base text-[color:var(--color-ink)]/80">{t.body}</p>
+            </div>
+          </li>
         ))}
-        <div className="flex flex-wrap gap-2 pt-2">
-          {profile.roles.map((r) => (
-            <span key={r} className="chip">
-              <span aria-hidden>◇</span> {r}
-            </span>
+      </ol>
+    </section>
+  );
+};
+
+const Impact = () => {
+  const ref = useReveal<HTMLElement>();
+  return (
+    <section ref={ref} id="impact" className="reveal mx-auto max-w-6xl px-4 py-20 md:px-8 md:py-28">
+      <SectionHeader index="03" eyebrow="QUANTIFIED OUTCOMES" title="IMPACT" />
+      <div className="grid gap-4 md:grid-cols-2">
+        {profile.impact.map((it, i) => (
+          <article key={i} className="hud-panel hud-corners scanlines p-6">
+            <div className="flex items-baseline justify-between gap-4">
+              <div>
+                <div className="font-display text-4xl md:text-5xl neon-cyan">{it.metric}</div>
+                <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.25em] text-[color:var(--color-ink-dim)]">
+                  {it.unit}
+                </div>
+              </div>
+              <span className="chip">OPS_{String(i + 1).padStart(2, "0")}</span>
+            </div>
+            <h3 className="mt-4 font-head text-lg md:text-xl uppercase text-[color:var(--color-ink)]">
+              {it.title}
+            </h3>
+            <p className="mt-2 text-sm text-[color:var(--color-ink)]/80 leading-relaxed">
+              {it.body}
+            </p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+};
+
+const Projects = () => {
+  const ref = useReveal<HTMLElement>();
+  return (
+    <section
+      ref={ref}
+      id="projects"
+      className="reveal mx-auto max-w-6xl px-4 py-20 md:px-8 md:py-28"
+    >
+      <SectionHeader index="04" eyebrow="SELF-ENGINEERED" title="OPERATIONS" />
+      <div className="grid gap-6 md:grid-cols-2">
+        {profile.projects.map((p) => (
+          <a
+            key={p.name}
+            href={p.href}
+            target="_blank"
+            rel="noreferrer"
+            className="hud-panel hud-corners group relative block overflow-hidden p-6 transition-colors hover:border-[color:var(--color-neon)]"
+          >
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[color:var(--color-neon)]/0 via-transparent to-[color:var(--color-cyan)]/0 opacity-0 transition-opacity group-hover:from-[color:var(--color-neon)]/10 group-hover:to-[color:var(--color-cyan)]/10 group-hover:opacity-100"
+            />
+            <div className="relative">
+              <div className="flex items-baseline justify-between gap-4">
+                <h3 className="font-display text-2xl md:text-3xl uppercase neon-magenta">
+                  {p.name}
+                </h3>
+                <span className="font-mono text-xs text-[color:var(--color-cyan)]">
+                  GITHUB <span aria-hidden>↗</span>
+                </span>
+              </div>
+              <div className="mt-1 font-head text-sm uppercase tracking-[0.2em] text-[color:var(--color-ink-dim)]">
+                {p.subtitle}
+              </div>
+              <p className="mt-4 text-sm text-[color:var(--color-ink)]/85 leading-relaxed">
+                {p.body}
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {p.chips.map((c) => (
+                  <span key={c} className="chip">
+                    {c}
+                  </span>
+                ))}
+              </div>
+              <p className="mt-4 font-mono text-[10px] uppercase tracking-[0.2em] text-[color:var(--color-ink-dim)]">
+                // {p.note}
+              </p>
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+  );
+};
+
+const Skills = () => {
+  const ref = useReveal<HTMLElement>();
+  return (
+    <section ref={ref} id="skills" className="reveal mx-auto max-w-6xl px-4 py-20 md:px-8 md:py-28">
+      <SectionHeader index="05" eyebrow="STACK & CREDENTIALS" title="SKILLS" />
+      <div className="grid gap-4 md:grid-cols-2">
+        {profile.skills.map((s) => (
+          <div key={s.group} className="hud-panel hud-corners p-5 font-mono text-sm">
+            <div className="mb-3 flex items-center gap-2 text-[11px] uppercase tracking-[0.3em]">
+              <span className="neon-cyan">$</span>
+              <span className="neon-magenta">./stack</span>
+              <span className="text-[color:var(--color-ink-dim)]">
+                --group {s.group.toLowerCase()}
+              </span>
+            </div>
+            <ul className="space-y-1.5">
+              {s.items.map((it) => (
+                <li key={it} className="flex gap-2">
+                  <span aria-hidden className="text-[color:var(--color-phos)]">
+                    ▸
+                  </span>
+                  <span className="text-[color:var(--color-ink)]/90">{it}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-10">
+        <div className="mb-4 font-mono text-[11px] uppercase tracking-[0.3em] text-[color:var(--color-ink-dim)]">
+          // ACTIVE CERTIFICATIONS
+        </div>
+        <div className="grid gap-3 md:grid-cols-3">
+          {profile.certs.map((c) => (
+            <div key={c.code} className="hud-panel hud-corners flex items-center gap-4 p-4">
+              <div className="grid h-14 w-14 shrink-0 place-items-center border border-[color:var(--color-line-strong)] font-display text-xs neon-cyan">
+                {c.code}
+              </div>
+              <div>
+                <div className="font-head text-sm uppercase text-[color:var(--color-ink)]">
+                  {c.name}
+                </div>
+                <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[color:var(--color-ink-dim)]">
+                  {c.issuer}
+                </div>
+              </div>
+            </div>
           ))}
         </div>
       </div>
+    </section>
+  );
+};
 
-      <aside className="hud-panel hud-corners relative flex flex-col justify-between p-5">
-        <div
-          aria-hidden
-          className="font-display text-[6rem] leading-none neon-magenta opacity-90"
-        >
-          {profile.kanji}
-        </div>
-        <dl className="mt-6 space-y-3 font-mono text-xs">
-          <div className="flex justify-between gap-4 border-b border-[color:var(--color-line)] pb-2">
-            <dt className="text-[color:var(--color-ink-dim)]">LOC</dt>
-            <dd className="text-[color:var(--color-cyan)]">{profile.location}</dd>
-          </div>
-          <div className="flex justify-between gap-4 border-b border-[color:var(--color-line)] pb-2">
-            <dt className="text-[color:var(--color-ink-dim)]">STATUS</dt>
-            <dd className="neon-phos">OPEN TO CONVERSATIONS</dd>
-          </div>
-          <div className="flex justify-between gap-4 border-b border-[color:var(--color-line)] pb-2">
-            <dt className="text-[color:var(--color-ink-dim)]">CLIENT</dt>
-            <dd>HEINEKEN · ~6 PB</dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-[color:var(--color-ink-dim)]">EXP</dt>
-            <dd>4+ YRS</dd>
-          </div>
-        </dl>
-      </aside>
-    </div>
-  </section>
-);
-
-const Timeline = () => (
-  <section id="timeline" className="mx-auto max-w-6xl px-4 py-20 md:px-8 md:py-28">
-    <SectionHeader index="02" eyebrow="MISSION LOG" title="TIMELINE" />
-    <ol className="relative space-y-8 pl-8 md:pl-12 before:absolute before:left-2 md:before:left-3 before:top-2 before:bottom-2 before:w-px before:bg-gradient-to-b before:from-[color:var(--color-cyan)] before:via-[color:var(--color-neon)] before:to-transparent">
-      {profile.timeline.map((t, i) => (
-        <li key={i} className="relative">
-          <span
-            aria-hidden
-            className="absolute -left-6 md:-left-9 top-1 h-4 w-4 rotate-45 border border-[color:var(--color-cyan)] bg-[color:var(--color-bg)] animate-pulse-neon"
-          />
-          <div className="hud-panel hud-corners p-5">
-            <div className="flex flex-wrap items-baseline gap-3 font-mono text-[11px] uppercase tracking-[0.25em]">
-              <span className="neon-magenta">{t.date}</span>
-              <span className="text-[color:var(--color-ink-dim)]">
-                ENTRY_{String(i + 1).padStart(2, "0")}
-              </span>
-            </div>
-            <h3 className="mt-2 font-head text-xl md:text-2xl uppercase text-[color:var(--color-ink)]">
-              {t.title}
-            </h3>
-            <p className="mt-2 text-sm md:text-base text-[color:var(--color-ink)]/80">
-              {t.body}
-            </p>
-          </div>
-        </li>
-      ))}
-    </ol>
-  </section>
-);
-
-const Impact = () => (
-  <section id="impact" className="mx-auto max-w-6xl px-4 py-20 md:px-8 md:py-28">
-    <SectionHeader index="03" eyebrow="QUANTIFIED OUTCOMES" title="IMPACT" />
-    <div className="grid gap-4 md:grid-cols-2">
-      {profile.impact.map((it, i) => (
-        <article key={i} className="hud-panel hud-corners scanlines p-6">
-          <div className="flex items-baseline justify-between gap-4">
-            <div>
-              <div className="font-display text-4xl md:text-5xl neon-cyan">
-                {it.metric}
-              </div>
-              <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.25em] text-[color:var(--color-ink-dim)]">
-                {it.unit}
-              </div>
-            </div>
-            <span className="chip">OPS_{String(i + 1).padStart(2, "0")}</span>
-          </div>
-          <h3 className="mt-4 font-head text-lg md:text-xl uppercase text-[color:var(--color-ink)]">
-            {it.title}
-          </h3>
-          <p className="mt-2 text-sm text-[color:var(--color-ink)]/80 leading-relaxed">
-            {it.body}
-          </p>
-        </article>
-      ))}
-    </div>
-  </section>
-);
-
-const Projects = () => (
-  <section id="projects" className="mx-auto max-w-6xl px-4 py-20 md:px-8 md:py-28">
-    <SectionHeader index="04" eyebrow="SELF-ENGINEERED" title="OPERATIONS" />
-    <div className="grid gap-6 md:grid-cols-2">
-      {profile.projects.map((p) => (
+const Contact = () => {
+  const ref = useReveal<HTMLElement>();
+  return (
+    <section
+      ref={ref}
+      id="contact"
+      className="reveal mx-auto max-w-6xl px-4 py-20 md:px-8 md:py-28"
+    >
+      <SectionHeader index="06" eyebrow="OPEN CHANNEL" title="CONTACT" />
+      <p className="mb-6 max-w-2xl text-sm md:text-base text-[color:var(--color-ink)]/80">
+        Not actively job-hunting, but if you have an interesting opportunity or a hard problem worth
+        solving, my DMs are open. Reach out on{" "}
         <a
-          key={p.name}
-          href={p.href}
+          href={profile.links.linkedin}
           target="_blank"
           rel="noreferrer"
-          className="hud-panel hud-corners group relative block overflow-hidden p-6 transition-colors hover:border-[color:var(--color-neon)]"
+          className="underline decoration-[color:var(--color-neon)] decoration-1 underline-offset-4 hover:neon-magenta"
         >
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[color:var(--color-neon)]/0 via-transparent to-[color:var(--color-cyan)]/0 opacity-0 transition-opacity group-hover:from-[color:var(--color-neon)]/10 group-hover:to-[color:var(--color-cyan)]/10 group-hover:opacity-100"
-          />
-          <div className="relative">
-            <div className="flex items-baseline justify-between gap-4">
-              <h3 className="font-display text-2xl md:text-3xl uppercase neon-magenta">
-                {p.name}
-              </h3>
-              <span className="font-mono text-xs text-[color:var(--color-cyan)]">
-                GITHUB <span aria-hidden>↗</span>
-              </span>
-            </div>
-            <div className="mt-1 font-head text-sm uppercase tracking-[0.2em] text-[color:var(--color-ink-dim)]">
-              {p.subtitle}
-            </div>
-            <p className="mt-4 text-sm text-[color:var(--color-ink)]/85 leading-relaxed">
-              {p.body}
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {p.chips.map((c) => (
-                <span key={c} className="chip">
-                  {c}
-                </span>
-              ))}
-            </div>
-            <p className="mt-4 font-mono text-[10px] uppercase tracking-[0.2em] text-[color:var(--color-ink-dim)]">
-              // {p.note}
-            </p>
-          </div>
-        </a>
-      ))}
-    </div>
-  </section>
-);
-
-const Skills = () => (
-  <section id="skills" className="mx-auto max-w-6xl px-4 py-20 md:px-8 md:py-28">
-    <SectionHeader index="05" eyebrow="STACK & CREDENTIALS" title="SKILLS" />
-    <div className="grid gap-4 md:grid-cols-2">
-      {profile.skills.map((s) => (
-        <div key={s.group} className="hud-panel hud-corners p-5 font-mono text-sm">
-          <div className="mb-3 flex items-center gap-2 text-[11px] uppercase tracking-[0.3em]">
-            <span className="neon-cyan">$</span>
-            <span className="neon-magenta">./stack</span>
-            <span className="text-[color:var(--color-ink-dim)]">
-              --group {s.group.toLowerCase()}
-            </span>
-          </div>
-          <ul className="space-y-1.5">
-            {s.items.map((it) => (
-              <li key={it} className="flex gap-2">
-                <span aria-hidden className="text-[color:var(--color-phos)]">▸</span>
-                <span className="text-[color:var(--color-ink)]/90">{it}</span>
-              </li>
-            ))}
-          </ul>
+          LinkedIn
+        </a>{" "}
+        and let&apos;s talk.
+      </p>
+      <div className="hud-panel hud-corners scanlines p-6 md:p-10 font-mono text-sm md:text-base">
+        <div className="mb-4 flex items-center gap-2 text-[color:var(--color-ink-dim)]">
+          <span aria-hidden className="neon-phos">
+            ●
+          </span>
+          <span>jkp@nightcity ~ % ./contact.sh</span>
         </div>
-      ))}
-    </div>
-
-    <div className="mt-10">
-      <div className="mb-4 font-mono text-[11px] uppercase tracking-[0.3em] text-[color:var(--color-ink-dim)]">
-        // ACTIVE CERTIFICATIONS
+        <ul className="space-y-3">
+          {[
+            ["EMAIL", profile.email, `mailto:${profile.email}`],
+            ["PHONE", profile.phone, `tel:${profile.phone.replace(/[^+\d]/g, "")}`],
+            [
+              "LINKEDIN",
+              profile.links.linkedin.replace(/^https?:\/\//, ""),
+              profile.links.linkedin,
+            ],
+            ["GITHUB", profile.links.github.replace(/^https?:\/\//, ""), profile.links.github],
+            ["SITE", profile.links.site.replace(/^https?:\/\//, ""), profile.links.site],
+          ].map(([label, value, href]) => (
+            <li key={label} className="flex flex-wrap items-baseline gap-3">
+              <span className="w-20 text-[color:var(--color-ink-dim)]">{label}</span>
+              <span aria-hidden className="neon-cyan">
+                ▸
+              </span>
+              <a
+                href={href}
+                target={href!.startsWith("http") ? "_blank" : undefined}
+                rel="noreferrer"
+                className="text-[color:var(--color-ink)] underline decoration-[color:var(--color-neon)] decoration-1 underline-offset-4 hover:neon-magenta"
+              >
+                {value}
+              </a>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <a href={`mailto:${profile.email}`} className="btn-neon">
+            <span aria-hidden>▸</span> SEND TRANSMISSION
+          </a>
+          <a href={profile.links.github} target="_blank" rel="noreferrer" className="btn-ghost">
+            <span aria-hidden>◇</span> GITHUB.ARCHIVE
+          </a>
+        </div>
       </div>
-      <div className="grid gap-3 md:grid-cols-3">
-        {profile.certs.map((c) => (
-          <div
-            key={c.code}
-            className="hud-panel hud-corners flex items-center gap-4 p-4"
-          >
-            <div className="grid h-14 w-14 shrink-0 place-items-center border border-[color:var(--color-line-strong)] font-display text-xs neon-cyan">
-              {c.code}
-            </div>
-            <div>
-              <div className="font-head text-sm uppercase text-[color:var(--color-ink)]">
-                {c.name}
-              </div>
-              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[color:var(--color-ink-dim)]">
-                {c.issuer}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  </section>
-);
-
-const Contact = () => (
-  <section id="contact" className="mx-auto max-w-6xl px-4 py-20 md:px-8 md:py-28">
-    <SectionHeader index="06" eyebrow="OPEN CHANNEL" title="CONTACT" />
-    <p className="mb-6 max-w-2xl text-sm md:text-base text-[color:var(--color-ink)]/80">
-      Not actively job-hunting, but if you have an interesting opportunity or a hard
-      problem worth solving, my DMs are open. Reach out on{" "}
-      <a
-        href={profile.links.linkedin}
-        target="_blank"
-        rel="noreferrer"
-        className="underline decoration-[color:var(--color-neon)] decoration-1 underline-offset-4 hover:neon-magenta"
-      >
-        LinkedIn
-      </a>{" "}
-      and let&apos;s talk.
-    </p>
-    <div className="hud-panel hud-corners scanlines p-6 md:p-10 font-mono text-sm md:text-base">
-      <div className="mb-4 flex items-center gap-2 text-[color:var(--color-ink-dim)]">
-        <span aria-hidden className="neon-phos">●</span>
-        <span>jkp@nightcity ~ % ./contact.sh</span>
-      </div>
-      <ul className="space-y-3">
-        {[
-          ["EMAIL", profile.email, `mailto:${profile.email}`],
-          ["PHONE", profile.phone, `tel:${profile.phone.replace(/[^+\d]/g, "")}`],
-          ["LINKEDIN", profile.links.linkedin.replace(/^https?:\/\//, ""), profile.links.linkedin],
-          ["GITHUB", profile.links.github.replace(/^https?:\/\//, ""), profile.links.github],
-          ["SITE", profile.links.site.replace(/^https?:\/\//, ""), profile.links.site],
-        ].map(([label, value, href]) => (
-          <li key={label} className="flex flex-wrap items-baseline gap-3">
-            <span className="w-20 text-[color:var(--color-ink-dim)]">{label}</span>
-            <span aria-hidden className="neon-cyan">▸</span>
-            <a
-              href={href}
-              target={href!.startsWith("http") ? "_blank" : undefined}
-              rel="noreferrer"
-              className="text-[color:var(--color-ink)] underline decoration-[color:var(--color-neon)] decoration-1 underline-offset-4 hover:neon-magenta"
-            >
-              {value}
-            </a>
-          </li>
-        ))}
-      </ul>
-      <div className="mt-6 flex flex-wrap gap-3">
-        <a href={`mailto:${profile.email}`} className="btn-neon">
-          <span aria-hidden>▸</span> SEND TRANSMISSION
-        </a>
-        <a href={profile.links.github} target="_blank" rel="noreferrer" className="btn-ghost">
-          <span aria-hidden>◇</span> GITHUB.ARCHIVE
-        </a>
-      </div>
-    </div>
-  </section>
-);
+    </section>
+  );
+};
 
 const Footer = () => (
   <footer className="border-t border-[color:var(--color-line)] py-8">
@@ -416,9 +594,11 @@ const Footer = () => (
 );
 
 export function Portfolio() {
+  const active = useActiveSection();
+  const progress = useScrollProgress();
   return (
     <div className="min-h-screen animate-flicker">
-      <Nav />
+      <Nav active={active} progress={progress} />
       <main>
         <Hero />
         <About />

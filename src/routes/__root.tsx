@@ -83,8 +83,7 @@ export const Route = createRootRoute({
       { property: "og:title", content: "Jabirhusain KP - Data × AI Engineer" },
       {
         property: "og:description",
-        content:
-          "Enterprise lakehouse engineering + applied multi-agent AI. IBM · Heineken.",
+        content: "Enterprise lakehouse engineering + applied multi-agent AI. IBM · Heineken.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
